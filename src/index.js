@@ -12,7 +12,7 @@ dbConnection()
         console.log('Connection Failed before Listen : ', error );
         throw error;
     })
-    app.listen(process.env.PORT || 5000,()=>{
+    app.listen(process.env.PORT || 7000,()=>{
         console.log(`Server is running on this port : ${process.env.PORT}`);
         
     })
