@@ -1,111 +1,88 @@
-// importing the asyncHandler wrapper for user controllers
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {apiErrors} from "../utils/ApiErrors.js"
-import {User} from "../models/user.model.js"
-import {uploadFilesOnCloudinary} from "../utils/cloudinary.js"
-import {apiResponse} from "../utils/apiResponse.js"
-import { json } from "express";
-const userRegistration= asyncHandler(async (req,res)=>{
-    res.status(200).json({
-        message:'user routes are working fine !!!'
-    })
+import { apiErrors } from "../utils/ApiErrors.js";
+import { User } from "../models/user.model.js";
+import { uploadFilesOnCloudinary } from "../utils/cloudinary.js";
+import { apiResponse } from "../utils/apiResponse.js";
 
-    // Steps for creating registration :
-    // - get user details from frontend :
-    // - validation not empty :
-    // - check if user is already registerd or not :
-    // - check imgaes, check avatar :
-    // - upload them to cloudinary,avatar :
-    // - create user object [save them to database] :
-    // - remove password and refresh token from response :
-    // check if the user is created or not :
-    // if [Yes ] then responed or [No] return Error :
+const userRegistration = asyncHandler(async (req, res) => {
+    const { fullName, email, username, password } = req.body;
 
-    const {fullName,email,username,password} = req.body
-
-
-    // applying chekcs for empty fields :
-    if([fullName,email,username,password].some((fields)=>
-        fields?.trim()===""
-    )){
-        throw new apiErrors(400,"Please fill all the fields ")
+    // Check for empty fields
+    if ([fullName, email, username, password].some(field => field?.trim() === "")) {
+        throw new apiErrors(400, "Please fill all the fields ");
     }
 
-    console.log("Data Coming from Frontend or Postman : ",req.body);
+    console.log("Data Coming from Frontend or Postman : ", req.body);
 
-    // Check 2 : user is already registered or not :
+    // Check if user is already registered
+    const userExist = await User.findOne({
+        $or: [{ username }, { email }]
+    });
 
-    const userExist = User.findOne({
-        $or : [{username},{email}]
-    })
-    console.log("Exixting User : " + userExist);
-    
-    
-    if(userExist){
-        throw new apiErrors('403',"User is Already Exist ! try diifrent email and username")
+    // console.log("Existing User : " + userExist);
+
+    if (userExist) {
+        throw new apiErrors(403, "User is Already Exist! Try a different email and username");
     }
-    
+
+    // Get file paths
     const avatarLocationPath = req.files?.avatar[0]?.path;
+    // const coverImageLocation = req.files?.coverImage[0]?.path;
 
-    console.log("Avatar Location --> : ",avatarLocationPath);
+    let coverImageLocation;
 
-    const coverImageLocation = req.files?.avatar[0]?.path
-
-    console.log("CoverImage Location --> : ",coverImageLocation);
-
-    // Check 3 : Avatar is uploaded or not :
-
-    if (!avatarLocationPath) {
-        throw new apiErrors(400," Avatar field is Required")
+    if (req.files && Array.isArray(req.files.coverImageLocation) && req.files.coverImageLocation.length > 0   ) {
+        coverImageLocation = req.files.coverImageLocation.path
     }
 
-    //  Uploading to the Cludinary :
+    // console.log("REQUEST.FILES : - >",req.files);
+    
 
+    // console.log("Avatar Location --> : ", avatarLocationPath);
+    // console.log("Cover Image Location --> : ", coverImageLocation);
+
+    // Check if avatar is uploaded
+    if (!avatarLocationPath) {
+        throw new apiErrors(400, "Avatar field is Required");
+    }
+
+    // Upload to Cloudinary
     const avatar = await uploadFilesOnCloudinary(avatarLocationPath);
     const coverImage = await uploadFilesOnCloudinary(coverImageLocation);
-    console.log("avatar : ",avatar);
-    
-    //  Another Avatar Check :
 
+    // console.log("coverImage : ", coverImage);
+    // console.log("avatar : ", avatar);
+
+    // Check if avatar upload was successful
     if (!avatar) {
-        throw new apiErrors(400,"Avatar field is Required")
+        throw new apiErrors(400, "Avatar upload failed");
     }
 
-    // Creating user Object :
-
-    const userData= await User.create({
-        username : username.toLowerCase(),
+    // Create user object
+    const userData = await User.create({
+        username: username.toLowerCase(),
         email,
         fullName,
         password,
-        avatar : avatar.url,
-        coverImage : coverImage?.url || ""
-    })
+        avatar: avatar.url,
+        coverImage: coverImage?.url || ""
+    });
 
-    console.log("userData : ",userData);
-    
-    // Removing Password  and Token fields from response :
+    // console.log("userData : ", userData);
 
-    const userIsCreated = await User.findById(User._id).select(
-        "-password -refreshToken"
-    )
+    // Fetch the created user
+    const userIsCreated = await User.findById(userData._id).select("-password -refreshToken");
 
-    console.log("userIsCreated : ",userIsCreated);
-    
-    
+    // console.log("userIsCreated : ", userIsCreated);
+
     if (!userIsCreated) {
-        throw new apiErrors(500,"Unavailable to Created user during registration ") //available
+        throw new apiErrors(500, "Unable to create user during registration");
     }
-    
 
-    // Sending the Structured Manner Response : 
+    // Send the response
+    return res.status(200).json(
+        new apiResponse(200, userIsCreated, "User is created successfully")
+    );
+});
 
-    return res.status(200),json(
-        new apiResponse(200,userIsCreated,"User is created successfully")
-    )
-    
-    
-})
-
-
-export {userRegistration};
+export { userRegistration };
