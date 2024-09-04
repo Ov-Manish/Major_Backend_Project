@@ -53,7 +53,7 @@ userSchema.methods.isPasswordCorrect = async function(password){
 
 // Generate Access Token :
 userSchema.methods.genrateAccessToken = function(){
-    jwt.sign(
+   return jwt.sign(
         {
         _id:this._id,
         email:this.email,
@@ -61,7 +61,7 @@ userSchema.methods.genrateAccessToken = function(){
         fullName:this.fullName
         },
 
-        process.env.AACCESS_TOKEN_SECRET,
+        process.env.ACCESS_TOKEN_SECRET,
 
         {
         expiresIn:process.env.ACCESS_TOKEN_EXPIRY
@@ -71,7 +71,7 @@ userSchema.methods.genrateAccessToken = function(){
 
 // Generate Refresh Token :
 userSchema.methods.generateRefreshToken=function(){
-    jwt.sign(
+    return jwt.sign(
         {
             _id:this._id,
         },
