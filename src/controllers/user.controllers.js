@@ -3,6 +3,7 @@ import { apiErrors } from "../utils/ApiErrors.js";
 import { User } from "../models/user.model.js";
 import { uploadFilesOnCloudinary } from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
+import jwt from "jsonwebtoken"
 
 const userRegistration = asyncHandler(async (req, res) => {
     const { fullName, email, username, password } = req.body;
@@ -191,4 +192,56 @@ const loggedOutUser = asyncHandler(async (req,res)=>{
    .json(new apiResponse(200,{}, "User Logged Out Successfully"))
 })
 
-export { userRegistration , loggedInUser, loggedOutUser };
+
+
+// Refresh Token and Access Token :
+
+const refreshAccessTokens= asyncHandler(async(req,res)=>{
+
+    const incomingTokens= req.cookies.refreshToken || req.body.refreshToken
+
+    if (!incomingTokens) {
+        throw new apiErrors(401,"Unauthorized access token") 
+    }
+
+   try {
+     const decodedToken= jwt.verify(
+         incomingTokens,
+         process.env.REFRESH_TOKEN_SECRET
+     )
+ 
+     const gotUser = await User.findById(decodedToken?._id)
+ 
+     if (!gotUser) {
+         throw new apiErrors(401,"Invalid Refresh Token")  
+     }
+ 
+     //  Token is Expired or not :
+     if (incomingTokens !== gotUser.refreshToken) {
+         throw new apiErrors(401," Refresh Token is Expired")   
+     }
+ 
+     // Generate new token after expired :
+     const options = {
+         httpOnly: true,
+         secure : true
+     }
+ 
+     const {accessToken,newRefreshToken} = await generateAccessAndRefreshToken(gotUser._id)
+ 
+     res.status(200)
+     .cookie("accessToken",accessToken,options) 
+     .cookie("refreshToken",newRefreshToken,options)
+     .json(
+         new apiResponse(200,
+             {accessToken,refreshToken:newRefreshToken},
+             "Access Token Refreshed Successfully"
+         )
+     ) 
+   } catch (error) {
+     throw new apiErrors(404,error?.message || "Invalid Refresh Token")
+   }
+
+})
+
+export { userRegistration , loggedInUser, loggedOutUser ,refreshAccessTokens };

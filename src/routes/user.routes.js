@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loggedInUser, loggedOutUser, userRegistration } from "../controllers/user.controllers.js";
+import { loggedInUser, loggedOutUser, userRegistration, refreshAccessTokens } from "../controllers/user.controllers.js";
 import {upload} from "../middlewares/multer.middleware.js"
 import { userlogOutJwt } from "../middlewares/auth.middleware.js";
 const router=Router();
@@ -22,5 +22,9 @@ router.route("/login").post(loggedInUser);
 
 
 router.route("/logout").post(userlogOutJwt ,loggedOutUser)
+
+// Cretting an End point for Refresh Tokens :
+
+router.route('/refreshToken').post(refreshAccessTokens)
 
 export default router;
