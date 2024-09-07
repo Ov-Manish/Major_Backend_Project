@@ -246,7 +246,136 @@ const refreshAccessTokens= asyncHandler(async(req,res)=>{
 
 //  Adding a ChangePassword functionality :
 
+    const ChangesInPassword = asyncHandler(async(req,res)=>{
 
+        const {oldPassword,newPassword} = req.body;
+
+        console.log("getting the data from User for updation : ",oldPassword, newPassword );
+        
+        // if (!(newPassword === oldPassword)) {
+        //     throw new apiErrors(404," Your new Password does not match");
+        // }
+
+        const user = await User.findById(req.user?._id); // user got it
+
+        const isPasswordtrue = await user.isPasswordCorrect(oldPassword)
+
+        if (!isPasswordtrue) {
+            throw new apiErrors(400,"Invalid Password");
+        }
+
+        user.password = newPassword;
+        await user.save({validateBeforeSave : false});
+
+
+        return res
+        .status(200)
+        .json(new apiResponse(200,{},"Password updated successfully"))
+    })
+
+    // Getting Cureent User 
+
+    const getUser= asyncHandler(async(req,res)=>{
+        return res
+               .status(200)
+               .json(200,req.user,"Current User fetched Successfully")
+
+    })
+
+
+    //  User Information Updation :
+
+    const updateUserInfo = asyncHandler(async(req,res)=>{
+        const {fullName,email} = req.body;
+
+        if (!fullName || !email) {
+            throw new apiErrors(400,"FullName and Email Required !")
+        }
+
+        const user = await User.findByIdAndUpdate(req.user._id,
+            {
+                $set : {
+                    fullName,
+                    email
+                }
+            },
+            {new : true}
+        ).select("-password")
+
+
+        return res
+               .status(200)
+               .json(new apiResponse(200,user,"User Information Updated Successfully"))
+    })
+
+    //  Avatar Updation :
     
+    const avatarUpdation = asyncHandler(async(req,res)=>{
+        const avatarPath= req.file?.path
 
-export { userRegistration , loggedInUser, loggedOutUser ,refreshAccessTokens };
+        if (!avatarPath) {
+            throw new apiErrors(400,"Avatar is Required !");
+        }
+
+        const avatarUploaded = await uploadFilesOnCloudinary(avatarPath)
+
+        if (!avatarUploaded.url) {
+            throw new apiErrors(404,"Problem in Uploading Avatar")
+        }
+
+
+        const UpdatedUserProfile = await User.findByIdAndUpdate(req.user?._id,
+            {
+                $set :{
+                        avatarUploaded : avatarUploaded.url
+                      }
+            },
+            {
+                new : true
+            }).select("-password")
+
+            return res
+            .status(200)
+            .json(new apiResponse(200,UpdatedUserProfile,
+                "Avatar Updated Successfully"))
+    })
+
+    const coverImageUpdation = asyncHandler(async(req,res)=>{
+        coverImagePath = req.file?.path
+
+        if (!coverImagePath) {
+            throw new apiErrors(400,"CoverImage is Required !");
+        }
+
+        const coverImageUploaded = await uploadFilesOnCloudinary(coverImagePath)
+
+        if (!coverImageUploaded.url) {
+            throw new apiErrors(400,"Problem in Uploading CoverImage !");
+        }
+
+        const UpdatedUserCoverImage = await User.findByIdAndUpdate(req.user?._id,
+            {
+                $set : {
+                    coverImageUploaded : coverImageUploaded.url
+                }
+            },
+            {new : true}
+        ).select("-password")
+
+        return res
+        .status(200)
+        .json(new apiResponse(200,UpdatedUserCoverImage,
+            "CoverImage Updated Successfully"))
+    })
+    //  there will be some error because of my variable assigning  so fix it if it occurs OK !
+
+export { userRegistration,
+         loggedInUser,
+         loggedOutUser,
+         refreshAccessTokens,
+         ChangesInPassword,
+         getUser,
+         updateUserInfo,
+         avatarUpdation,
+         coverImageUpdation
+ };
