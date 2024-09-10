@@ -369,6 +369,80 @@ const refreshAccessTokens= asyncHandler(async(req,res)=>{
     })
     //  there will be some error because of my variable assigning  so fix it if it occurs OK !
 
+    //  Write Channel Controller :
+    const Channelsubcribtions = asyncHandler(async(req,res)=>{
+        const {username} = req.params
+
+        if (!username?.trim()) {
+            throw new apiErrors(400,"username is not exist")
+        }
+
+        // Writing Channle pipelines :
+        const subscriber = await User.aggregate([
+            {
+                $match:{
+                    username : username,
+                },
+                
+            },
+            {
+                $lookup:{
+                from : "subscriptions",
+                localField:"_id",
+                foreignField:"channel",
+                as : "subscribers"
+            }
+        },
+        {
+            $lookup:{
+                from : "subscriptions",
+                localField:"_id",
+                foreignField:"subscription",
+                as : "subscribedTo"
+            }
+        },
+        {
+            $addFields:{
+                subscriberCount :{
+                    $size : "$subscribers"
+                },
+                subscribedToCount :{
+                    $size : "$subscribedTo"
+                },
+                isSubscribed:{
+                    $cond :{
+                        if : {$in : [req.user?._id,"$subscribers.subscription"]},
+                        then : true,
+                        else : false
+                    }
+                }
+            }
+        },
+        {
+            $project :{
+                fullName : 1,
+                username : 1,
+                subscriberCount : 1,
+                subscribedToCount : 1,
+                isSubscribed : 1,
+                avatar : 1,
+                coverImage : 1,
+                email : 1
+            }
+        }
+
+        ])
+
+        if (!Channelsubcribtions?.length) {
+            throw new apiErrors(404,"Channel does not Exist")
+        }
+
+        console.log(subscriber);
+
+        return res.status(200)
+        .json(new apiResponse(200,Channelsubcribtions[0],"User Channel fetched Successfully"))
+        
+    }) 
 export { userRegistration,
          loggedInUser,
          loggedOutUser,
@@ -377,5 +451,6 @@ export { userRegistration,
          getUser,
          updateUserInfo,
          avatarUpdation,
-         coverImageUpdation
+         coverImageUpdation,
+         Channelsubcribtions
  };
