@@ -175,7 +175,7 @@ const loggedOutUser = asyncHandler(async (req,res)=>{
     await User.findByIdAndUpdate(
         req.user._id,{
             $set:{
-                refreshToken: undefined
+                refreshToken: 1 // this will help you to remove the fields
             }
         },
         {
@@ -276,7 +276,9 @@ const refreshAccessTokens= asyncHandler(async(req,res)=>{
 
     // Getting Cureent User 
 
-    const getUser= asyncHandler(async(req,res)=>{
+    const getUser = asyncHandler(async(req,res)=>{
+        console.log(req.user);
+        
         return res
                .status(200)
                .json(200,req.user,"Current User fetched Successfully")
@@ -373,12 +375,13 @@ const refreshAccessTokens= asyncHandler(async(req,res)=>{
     //  Write Channel Controller :
     const Channelsubcribtions = asyncHandler(async(req,res)=>{
         const {username} = req.params
-
+        console.log(username);
+        
         if (!username?.trim()) {
             throw new apiErrors(400,"username is not exist")
         }
 
-        // Writing Channle pipelines :
+        // Writing Channle pipelines :  
         const subscriber = await User.aggregate([
             {
                 $match:{
@@ -438,10 +441,10 @@ const refreshAccessTokens= asyncHandler(async(req,res)=>{
             throw new apiErrors(404,"Channel does not Exist")
         }
 
-        console.log(subscriber);
+        console.log(subscriber[0]);
 
         return res.status(200)
-        .json(new apiResponse(200,Channelsubcribtions[0],"User Channel fetched Successfully"))
+        .json(new apiResponse(200,subscriber[0],"User Channel fetched Successfully"))
         
     }) 
 
@@ -492,6 +495,7 @@ const refreshAccessTokens= asyncHandler(async(req,res)=>{
                 .json(new apiResponse(200,user[0].watchHistory,"Watch History fetched Successfully !!"))
     })
 
+    // Adding new modules tomorrow 
 export { userRegistration,
          loggedInUser,
          loggedOutUser,
